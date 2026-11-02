@@ -87,10 +87,16 @@ export function usePlayback({
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || trackKey == null || !src) return;
+    if (!audio) return;
+    if (trackKey == null || !src) {
+      audio.pause();
+      return;
+    }
+    /* eslint-disable react-hooks/set-state-in-effect -- reset the clock when the audio source changes */
     setFailed(false);
     setTime(0);
     setDuration(0);
+    /* eslint-enable react-hooks/set-state-in-effect */
     audio.src = src;
     audio.load();
     if (autoplayRef.current) {

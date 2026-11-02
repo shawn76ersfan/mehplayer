@@ -130,6 +130,64 @@ img {
   gap: 8px;
 }
 
+.spotify {
+  position: relative;
+}
+
+.spotify-btn.is-on::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #1ed760;
+}
+
+.spotify-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 6;
+  width: min(340px, 78vw);
+  padding: 14px;
+  border-radius: 18px;
+  background: #161513;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  text-align: left;
+}
+
+.spotify-panel p,
+.spotify-panel li {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  opacity: 0.82;
+}
+
+.spotify-panel ul {
+  margin: 0 0 10px;
+  padding-left: 16px;
+}
+
+.spotify-panel li {
+  overflow-wrap: anywhere;
+}
+
+.spotify-panel input {
+  width: 100%;
+  margin-bottom: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  padding: 10px 14px;
+}
+
+.spotify-panel .ghost-btn {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
 .ghost-btn {
   min-height: 40px;
   border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);

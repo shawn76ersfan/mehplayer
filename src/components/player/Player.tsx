@@ -6,7 +6,9 @@ import { api } from "../../../convex/_generated/api";
 import { formatClock, formatRelease } from "@/lib/format";
 import { readPersisted, writePersisted, type RepeatMode } from "@/lib/storage";
 import { AuthMenu } from "./AuthMenu";
+import { SpotifyMenu } from "./SpotifyMenu";
 import { usePlayback } from "./usePlayback";
+import { useSpotify } from "./useSpotify";
 
 type Album = {
   collectionId: number;
@@ -163,8 +165,18 @@ export function Player() {
     };
   });
 
-  const playback = usePlayback({
-    src: current?.previewUrl ?? null,
+  const spotify = useSpotify({
+    trackId: current?.trackId ?? null,
+    title: current?.title ?? "",
+    album: palette?.title ?? "",
+    autoplay,
+    volume,
+    muted,
+    repeat,
+    onEnded: () => stepRef.current(1),
+  });
+  const preview = usePlayback({
+    src: spotify.owns ? null : (current?.previewUrl ?? null),
     trackKey: current?.trackId ?? null,
     autoplay,
     volume,
@@ -172,11 +184,12 @@ export function Player() {
     repeat,
     onEnded: () => stepRef.current(1),
     onError: () => {
-      if (errorSkips.current >= 4) return;
+      if (spotify.owns || errorSkips.current >= 4) return;
       errorSkips.current += 1;
       stepRef.current(1);
     },
   });
+  const playback = spotify.owns ? spotify : preview;
 
   function remember(track: Track | null) {
     if (!track) return;
@@ -530,6 +543,12 @@ export function Player() {
               Install
             </button>
           ) : null}
+          <SpotifyMenu
+            connected={spotify.connected}
+            status={spotify.status}
+            onDisconnect={spotify.disconnect}
+            onOpen={() => void spotify.openExternal()}
+          />
           <Suspense fallback={<span className="auth-slot" />}>
             <AuthMenu />
           </Suspense>
@@ -656,7 +675,7 @@ export function Player() {
                 />
                 <div className="times">
                   <span>{formatClock(playback.time)}</span>
-                  <span>Preview</span>
+                  <span>{spotify.owns ? "Spotify" : "Preview"}</span>
                   <span>{formatClock(seekMax)}</span>
                 </div>
                 <div className="controls">
@@ -722,12 +741,16 @@ export function Player() {
                     }}
                   />
                 </div>
-                {playback.failed ? <p className="fine">That preview didn’t load. Skipping ahead.</p> : null}
-                {iosHint ? (
+                {spotify.notice ? <p className="fine">{spotify.notice}</p> : null}
+                {!spotify.notice && playback.failed ? (
+                  <p className="fine">That preview didn’t load. Skipping ahead.</p>
+                ) : null}
+                {!spotify.notice && !playback.failed && iosHint ? (
                   <p className="fine">On iPhone, Share, then Add to Home Screen.</p>
-                ) : (
-                  <p className="fine">30-second Apple preview. Sign in to keep likes on every device.</p>
-                )}
+                ) : null}
+                {!spotify.notice && !playback.failed && !iosHint ? (
+                  <p className="fine">30-second Apple preview. Connect Spotify to play the full song.</p>
+                ) : null}
               </div>
             </>
           ) : (
