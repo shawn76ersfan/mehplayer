@@ -272,11 +272,32 @@ export function Player() {
 
   function back() {
     interacted.current = true;
-    if ((playbackRef.current?.getTime() ?? 0) > 3) {
+    if ((playbackRef.current?.getTime() ?? 0) > 1) {
       playbackRef.current?.seek(0);
+      setAutoplay(true);
+      playbackRef.current?.play();
       return;
     }
     step(-1);
+  }
+
+  function toggleShuffle() {
+    const next = !stateRef.current.shuffle;
+    stateRef.current = { ...stateRef.current, shuffle: next };
+    setShuffle(next);
+    if (!next) return;
+    const snapshot = stateRef.current;
+    const source =
+      snapshot.view === "liked"
+        ? snapshot.liked
+        : snapshot.view === "search"
+          ? snapshot.searchTracks
+          : snapshot.albumTracks;
+    const pick = randomTrack(source, snapshot.current?.trackId);
+    if (!pick) return;
+    remember(snapshot.current);
+    setAutoplay(true);
+    setCurrent(pick);
   }
 
   function chooseAlbum(id: number) {
@@ -303,7 +324,9 @@ export function Player() {
   }
 
   function cycleRepeat() {
-    setRepeat((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off"));
+    const next = stateRef.current.repeat === "off" ? "one" : stateRef.current.repeat === "one" ? "all" : "off";
+    stateRef.current = { ...stateRef.current, repeat: next };
+    setRepeat(next);
   }
 
   function onFavorite(trackId: number) {
@@ -694,11 +717,16 @@ export function Player() {
                     type="button"
                     aria-pressed={shuffle}
                     aria-label={shuffle ? "Shuffle on" : "Shuffle off"}
-                    onClick={() => setShuffle((value) => !value)}
+                    onClick={toggleShuffle}
                   >
                     <ShuffleIcon />
                   </button>
-                  <button className="icon-btn" type="button" aria-label="Previous" onClick={back}>
+                  <button
+                    className="icon-btn"
+                    type="button"
+                    aria-label={playback.time > 1 ? "Restart" : "Previous"}
+                    onClick={back}
+                  >
                     <SkipIcon direction="back" />
                   </button>
                   <button
@@ -723,6 +751,7 @@ export function Player() {
                     onClick={cycleRepeat}
                   >
                     <RepeatIcon mode={repeat} />
+                    {repeat === "one" ? <span className="mode-badge">1</span> : null}
                   </button>
                 </div>
                 <div className="volume">
@@ -880,6 +909,11 @@ function Slider({
       <div className="slider-track" aria-hidden="true">
         <div className="slider-fill" style={{ transform: `scaleX(${amount})` }} />
       </div>
+      <div
+        className={buildClasses("slider-knob", playing && "is-playing")}
+        style={{ left: `calc(8px + (100% - 16px) * ${amount})` }}
+        aria-hidden="true"
+      />
       <input
         type="range"
         min={min}

@@ -367,19 +367,15 @@ img {
 
 .slider-track {
   position: absolute;
-  right: 0;
-  left: 0;
+  top: 50%;
+  right: 8px;
+  left: 8px;
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
   background: color-mix(in srgb, var(--ink) 28%, transparent);
+  transform: translateY(-50%);
   pointer-events: none;
-  transition: height 180ms ease;
-}
-
-.slider:hover .slider-track,
-.slider:focus-within .slider-track {
-  height: 6px;
 }
 
 .slider-fill {
@@ -391,8 +387,32 @@ img {
   transition: transform 140ms linear;
 }
 
-.slider.is-scrubbing .slider-fill,
-.slider.is-scrubbing .slider-track {
+.slider-knob {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ink) 45%, transparent),
+    0 4px 12px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.slider:hover .slider-knob,
+.slider:focus-within .slider-knob {
+  transform: translate(-50%, -50%) scale(1.16);
+}
+
+.slider-knob.is-playing {
+  animation: thumb-glow 1.5s ease-in-out infinite;
+}
+
+.slider.is-scrubbing .slider-fill {
   transition: none;
 }
 
@@ -416,13 +436,10 @@ img {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border: 2px solid var(--bg);
+  border: 0;
   border-radius: 50%;
-  background: var(--ink);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--ink) 50%, transparent),
-    0 6px 16px rgba(0, 0, 0, 0.35);
-  transition: transform 180ms ease;
+  background: transparent;
+  box-shadow: none;
 }
 
 .slider input::-moz-range-track {
@@ -434,22 +451,9 @@ img {
 .slider input::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border: 2px solid var(--bg);
+  border: 0;
   border-radius: 50%;
-  background: var(--ink);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
-  transition: transform 180ms ease;
-}
-
-.slider:hover input::-webkit-slider-thumb,
-.slider:focus-within input::-webkit-slider-thumb,
-.slider:hover input::-moz-range-thumb,
-.slider:focus-within input::-moz-range-thumb {
-  transform: scale(1.18);
-}
-
-.slider.is-playing input::-webkit-slider-thumb {
-  animation: thumb-glow 1.5s ease-in-out infinite;
+  background: transparent;
 }
 
 .times {
@@ -480,6 +484,7 @@ img {
 }
 
 .icon-btn {
+  position: relative;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -492,10 +497,25 @@ img {
   opacity: 1;
 }
 
-.icon-btn.is-on,
+.icon-btn.is-on {
+  background: color-mix(in srgb, var(--wash) 34%, transparent);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wash) 80%, transparent);
+  opacity: 1;
+}
+
 .heart.is-on {
   color: var(--wash);
   opacity: 1;
+}
+
+.mode-badge {
+  position: absolute;
+  right: 7px;
+  bottom: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .icon-btn svg,

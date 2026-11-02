@@ -51,10 +51,14 @@ export function usePlayback({
     };
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
+    const replay = () => {
+      audio.currentTime = 0;
+      setTime(0);
+      void audio.play().catch(() => setPlaying(false));
+    };
     const ended = () => {
       if (repeatRef.current === "one") {
-        audio.currentTime = 0;
-        void audio.play().catch(() => setPlaying(false));
+        replay();
         return;
       }
       onEndedRef.current();
