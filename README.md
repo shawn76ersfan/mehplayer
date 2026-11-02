@@ -2,6 +2,8 @@
 
 Personal Kanye West player. Next.js, Convex, and Clerk. Album art, release dates, and official Apple previews. Install it from the browser as a PWA.
 
+https://mehplayer.vercel.app
+
 ```bash
 npm run dev
 npm run seed
