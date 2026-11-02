@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useDeferredValue, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { formatClock, formatRelease } from "@/lib/format";
@@ -29,6 +29,7 @@ type Track = {
   trackNumber: number;
   discNumber: number;
   explicit: boolean;
+  albumTitle?: string;
 };
 
 type InstallPrompt = Event & {
@@ -77,6 +78,7 @@ export function Player() {
   const [current, setCurrent] = useState<Track | null>(null);
   const [autoplay, setAutoplay] = useState(false);
   const [view, setView] = useState<"album" | "liked">("album");
+  const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<number[]>([]);
   const [volume, setVolume] = useState(0.9);
   const [muted, setMuted] = useState(false);
@@ -97,6 +99,13 @@ export function Player() {
   const albumTracks = useQuery(
     api.catalog.tracksForAlbum,
     activeCollectionId == null ? "skip" : { collectionId: activeCollectionId },
+  ) as Track[] | undefined;
+
+  const searchTerm = search.trim();
+  const deferredTerm = useDeferredValue(searchTerm);
+  const searchResults = useQuery(
+    api.catalog.searchTracks,
+    deferredTerm.length > 0 ? { term: deferredTerm } : "skip",
   ) as Track[] | undefined;
 
   const likedResult = useQuery(
@@ -125,7 +134,8 @@ export function Player() {
     liked: [] as Track[],
     albums: [] as Album[],
     collectionId: null as number | null,
-    view: "album" as "album" | "liked",
+    view: "album" as "album" | "liked" | "search",
+    searchTracks: [] as Track[],
     shuffle: false,
     repeat: "off" as RepeatMode,
   });
@@ -135,8 +145,9 @@ export function Player() {
     albumList.find((album) => album.collectionId === activeCollectionId) ??
     null;
 
-  const multiDisc = (albumTracks ?? []).some((track) => track.discNumber > 1);
-  const queue = view === "liked" ? liked : (albumTracks ?? []);
+  const mode = searchTerm.length > 0 ? "search" : view;
+  const multiDisc = mode === "album" && (albumTracks ?? []).some((track) => track.discNumber > 1);
+  const queue = mode === "search" ? (searchResults ?? []) : mode === "liked" ? liked : (albumTracks ?? []);
 
   useEffect(() => {
     stateRef.current = {
@@ -145,7 +156,8 @@ export function Player() {
       liked,
       albums: albumList,
       collectionId: activeCollectionId,
-      view,
+      view: mode,
+      searchTracks: searchResults ?? [],
       shuffle,
       repeat,
     };
@@ -174,7 +186,12 @@ export function Player() {
 
   function step(direction: 1 | -1) {
     const snapshot = stateRef.current;
-    const source = snapshot.view === "liked" ? snapshot.liked : snapshot.albumTracks;
+    const source =
+      snapshot.view === "liked"
+        ? snapshot.liked
+        : snapshot.view === "search"
+          ? snapshot.searchTracks
+          : snapshot.albumTracks;
     if (!snapshot.current || source.length === 0) return;
     interacted.current = true;
 
@@ -204,7 +221,7 @@ export function Player() {
       return;
     }
 
-    if (snapshot.view === "liked") {
+    if (snapshot.view === "liked" || snapshot.view === "search") {
       if (snapshot.repeat === "all" && source.length > 0) {
         const wrapped = direction === 1 ? source[0] : source[source.length - 1];
         if (direction === 1) remember(snapshot.current);
@@ -264,6 +281,7 @@ export function Player() {
     interacted.current = true;
     if (current && current.trackId !== track.trackId) remember(current);
     setAutoplay(true);
+    setCollectionId(track.collectionId);
     setCurrent(track);
   }
 
@@ -488,17 +506,12 @@ export function Player() {
           <small>kanye west</small>
         </div>
         <div className="artist">
-          {artist?.imageUrl ? (
-            // Artist and album art are already served from image CDNs.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={artist.imageUrl}
-              alt="Kanye West"
-              title={`Kanye West. Photo: ${artist.imageCredit}`}
-            />
-          ) : (
-            <span className="artist-fallback">KW</span>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/portrait.jpg"
+            alt="Kanye West"
+            title="Kanye West. Photo: David Shankbone, CC BY 3.0"
+          />
           <div className="artist-copy">
             <strong>{artist?.name ?? "Kanye West"}</strong>
             <span>{years}</span>
@@ -723,11 +736,30 @@ export function Player() {
         </section>
 
         <aside className="queue">
+          <form
+            className="search"
+            role="search"
+            onSubmit={(event) => event.preventDefault()}
+          >
+            <input
+              type="search"
+              value={search}
+              placeholder="Search every album"
+              aria-label="Search songs"
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            {search ? (
+              <button className="search-clear" type="button" aria-label="Clear search" onClick={() => setSearch("")}>
+                ×
+              </button>
+            ) : null}
+          </form>
           <div className="queue-head">
             <button
-              className={buildClasses("tab", view === "album" && "is-on")}
+              className={buildClasses("tab", mode === "album" && "is-on")}
               type="button"
               onClick={() => {
+                setSearch("");
                 setView("album");
                 if (current) setCollectionId(current.collectionId);
               }}
@@ -735,16 +767,25 @@ export function Player() {
               {palette?.title ?? "Album"}
             </button>
             <button
-              className={buildClasses("tab", view === "liked" && "is-on")}
+              className={buildClasses("tab", mode === "liked" && "is-on")}
               type="button"
-              onClick={() => setView("liked")}
+              onClick={() => {
+                setSearch("");
+                setView("liked");
+              }}
             >
               Liked
             </button>
           </div>
           <div className="queue-list">
-            {view === "liked" && favorites.length === 0 ? (
+            {mode === "liked" && favorites.length === 0 ? (
               <p className="empty-copy">Hearts stay on this device until you sign in.</p>
+            ) : null}
+            {mode === "search" && searchResults === undefined ? (
+              <p className="empty-copy">Searching…</p>
+            ) : null}
+            {mode === "search" && searchResults && searchResults.length === 0 ? (
+              <p className="empty-copy">No songs match.</p>
             ) : null}
             {queue.map((track) => {
               const active = track.trackId === current?.trackId;
@@ -756,8 +797,11 @@ export function Player() {
                     type="button"
                     onClick={() => chooseTrack(track)}
                   >
-                    <span>{active && playback.playing ? <Bars /> : number}</span>
-                    <strong>{track.title}</strong>
+                    <span>{active && playback.playing ? <Bars /> : mode === "search" ? "" : number}</span>
+                    <strong>
+                      {track.title}
+                      {mode === "search" && track.albumTitle ? <small>{track.albumTitle}</small> : null}
+                    </strong>
                     <em>{formatClock(track.durationMs / 1000)}</em>
                   </button>
                   <button

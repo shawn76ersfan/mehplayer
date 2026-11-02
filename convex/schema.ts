@@ -37,7 +37,10 @@ export default defineSchema({
     explicit: v.boolean(),
   })
     .index("by_album", ["collectionId", "discNumber", "trackNumber"])
-    .index("by_track", ["trackId"]),
+    .index("by_track", ["trackId"])
+    .searchIndex("search_title", {
+      searchField: "title",
+    }),
 
   favorites: defineTable({
     userId: v.string(),

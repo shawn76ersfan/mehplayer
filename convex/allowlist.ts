@@ -1,8 +1,7 @@
 export const ARTIST = {
   key: "kanye-west",
   name: "Kanye West",
-  imageUrl:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Kanye_West_at_the_2009_Tribeca_Film_Festival_%28crop_2%29.jpg/600px-Kanye_West_at_the_2009_Tribeca_Film_Festival_%28crop_2%29.jpg",
+  imageUrl: "/portrait.jpg",
   imageCredit: "David Shankbone, CC BY 3.0",
   itunesArtistId: 2715720,
 };

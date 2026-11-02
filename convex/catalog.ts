@@ -31,6 +31,34 @@ export const tracksForAlbum = query({
   },
 });
 
+export const searchTracks = query({
+  args: { term: v.string() },
+  handler: async (ctx, args) => {
+    const term = args.term.trim().slice(0, 80);
+    if (term.length === 0) return [];
+    const tracks = await ctx.db
+      .query("tracks")
+      .withSearchIndex("search_title", (q) => q.search("title", term))
+      .take(40);
+    const albums = await ctx.db
+      .query("albums")
+      .withIndex("by_artist", (q) => q.eq("artistKey", "kanye-west"))
+      .take(40);
+    const titles = new Map(albums.map((album) => [album.collectionId, album.title]));
+    return tracks.map((track) => ({
+      collectionId: track.collectionId,
+      trackId: track.trackId,
+      title: track.title,
+      previewUrl: track.previewUrl,
+      durationMs: track.durationMs,
+      trackNumber: track.trackNumber,
+      discNumber: track.discNumber,
+      explicit: track.explicit,
+      albumTitle: titles.get(track.collectionId) ?? "",
+    }));
+  },
+});
+
 export const tracksByIds = query({
   args: { trackIds: v.array(v.number()) },
   handler: async (ctx, args) => {
