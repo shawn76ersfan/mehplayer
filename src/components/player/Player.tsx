@@ -43,6 +43,10 @@ function buildClasses(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
+function artwork(url: string, size: number) {
+  return url.replace(/\/\d+x\d+bb(?=\.)/, `/${size}x${size}bb`);
+}
+
 function randomTrack(tracks: Track[], currentId?: number) {
   const pool = tracks.filter((track) => track.trackId !== currentId);
   const source = pool.length > 0 ? pool : tracks;
@@ -505,7 +509,7 @@ export function Player() {
     repeat === "one" ? "Repeat one preview" : repeat === "all" ? "Repeat all" : "Repeat off";
 
   return (
-    <div
+    <main
       className="shell"
       style={{
         ["--wash" as string]: palette?.primary ?? "#d4b15a",
@@ -523,6 +527,8 @@ export function Player() {
           <img
             src="/portrait.jpg"
             alt="Kanye West"
+            width={44}
+            height={44}
             title="Kanye West. Photo: David Shankbone, CC BY 3.0"
           />
           <div className="artist-copy">
@@ -566,10 +572,11 @@ export function Player() {
               )}
               key={album.collectionId}
               type="button"
+              aria-label={`${album.title}, ${album.year}`}
               onClick={() => chooseAlbum(album.collectionId)}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={album.artworkUrl} alt="" />
+              <img src={artwork(album.artworkUrl, 160)} alt="" width={74} height={74} />
               <span className="album-copy">
                 <strong>{album.title}</strong>
                 <em>{album.year}</em>
@@ -641,8 +648,10 @@ export function Player() {
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={palette.artworkUrl}
+                  src={artwork(palette.artworkUrl, 800)}
                   alt={`${palette.title} cover`}
+                  width={800}
+                  height={800}
                   draggable={false}
                   style={{ transform: `translate3d(${drag}px, 0, 0) rotate(${drag / 30}deg)` }}
                 />
@@ -656,22 +665,23 @@ export function Player() {
                 <h1 className="track-title">{current.title}</h1>
                 <p className="credit">
                   {palette.credit}
-                  {current.explicit ? <em className="explicit">E</em> : null}
+                  {current.explicit ? (
+                    <em className="explicit" aria-label="Explicit">
+                      E
+                    </em>
+                  ) : null}
                 </p>
               </div>
               <div className="transport">
-                <input
-                  className="seek"
-                  type="range"
+                <Slider
+                  label={spotify.owns ? "Playback position" : "Preview position"}
                   min={0}
                   max={seekMax}
                   step={0.1}
                   value={Math.min(playback.time, seekMax)}
-                  aria-label="Preview position"
-                  style={{
-                    background: `linear-gradient(to right, var(--ink) ${(playback.time / seekMax) * 100}%, color-mix(in srgb, var(--ink) 22%, transparent) ${(playback.time / seekMax) * 100}%)`,
-                  }}
-                  onChange={(event) => playback.seek(Number(event.target.value))}
+                  valueText={formatClock(Math.min(playback.time, seekMax))}
+                  playing={playback.playing}
+                  onChange={(next) => playback.seek(next)}
                 />
                 <div className="times">
                   <span>{formatClock(playback.time)}</span>
@@ -724,18 +734,14 @@ export function Player() {
                   >
                     <VolumeIcon level={shownVolume} />
                   </button>
-                  <input
-                    type="range"
+                  <Slider
+                    label="Volume"
                     min={0}
                     max={1}
                     step={0.01}
                     value={shownVolume}
-                    aria-label="Volume"
-                    style={{
-                      background: `linear-gradient(to right, var(--ink) ${shownVolume * 100}%, color-mix(in srgb, var(--ink) 22%, transparent) ${shownVolume * 100}%)`,
-                    }}
-                    onChange={(event) => {
-                      const next = Number(event.target.value);
+                    valueText={`${Math.round(shownVolume * 100)} percent`}
+                    onChange={(next) => {
                       setVolume(next);
                       setMuted(next === 0);
                     }}
@@ -842,6 +848,54 @@ export function Player() {
           </div>
         </aside>
       </div>
+    </main>
+  );
+}
+
+function Slider({
+  label,
+  min,
+  max,
+  step,
+  value,
+  valueText,
+  playing,
+  onChange,
+}: {
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  valueText: string;
+  playing?: boolean;
+  onChange: (next: number) => void;
+}) {
+  const [scrubbing, setScrubbing] = useState(false);
+  const span = Math.max(max - min, 0.001);
+  const amount = Math.min(1, Math.max(0, (value - min) / span));
+
+  return (
+    <div className={buildClasses("slider", playing && "is-playing", scrubbing && "is-scrubbing")}>
+      <div className="slider-track" aria-hidden="true">
+        <div className="slider-fill" style={{ transform: `scaleX(${amount})` }} />
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        aria-label={label}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={Number(value.toFixed(2))}
+        aria-valuetext={valueText}
+        onPointerDown={() => setScrubbing(true)}
+        onPointerUp={() => setScrubbing(false)}
+        onPointerCancel={() => setScrubbing(false)}
+        onChange={(event) => onChange(Number(event.target.value))}
+      />
     </div>
   );
 }

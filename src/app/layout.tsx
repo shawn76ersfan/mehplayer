@@ -16,10 +16,27 @@ const serif = Instrument_Serif({
   variable: "--font-serif",
 });
 
+const description = "A personal player for Kanye West, with albums, artwork, and official previews.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mehplayer.vercel.app"),
   title: "Meh — Kanye West",
-  description: "A personal player for Kanye West, with albums, artwork, and official previews.",
+  description,
   applicationName: "Meh",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Meh — Kanye West",
+    description,
+    url: "/",
+    siteName: "Meh",
+    type: "website",
+    images: [{ url: "/portrait.jpg", width: 160, height: 213, alt: "Kanye West" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Meh — Kanye West",
+    description,
+  },
   appleWebApp: {
     capable: true,
     title: "Meh",
